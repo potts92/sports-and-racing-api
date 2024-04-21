@@ -91,8 +91,6 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 			visibility = "false"
 		}
 		clauses = append(clauses, "visible = "+visibility)
-
-		args = append(args, filter.Visible)
 	}
 
 	if len(clauses) != 0 {
