@@ -80,12 +80,12 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 		}
 	}
 
-	// Don't need to handle default behaviour here (i.e. treat visible as true if not set) as with no visible filter
-	// applied the SQL won't be affected at all and all races will be affected regardless of visibility
-	if filter.Visible {
-		//todo: check Go syntax to write this more simply
+	// Need to check if visible is in filter so that it won't default to false
+	// If not set, visibility won't be set and SQL won't be affected
+	// Go struct field is a pointer to a boolean (set as optional in protobuf) to differentiate between unset and false
+	if filter.Visible != nil {
 		var visibility string
-		if filter.Visible == true {
+		if *filter.Visible == true {
 			visibility = "true"
 		} else {
 			visibility = "false"
