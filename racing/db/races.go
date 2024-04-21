@@ -102,7 +102,7 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 	return query, args
 }
 
-func (m *racesRepo) scanRaces(
+func (r *racesRepo) scanRaces(
 	rows *sql.Rows,
 ) ([]*racing.Race, error) {
 	var races []*racing.Race
