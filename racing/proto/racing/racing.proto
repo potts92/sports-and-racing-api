@@ -14,6 +14,7 @@ service Racing {
 
 message ListRacesRequest {
   ListRacesRequestFilter filter = 1;
+  ListRacesRequestSortOrder sort = 2;
 }
 
 // Response to ListRaces call.
@@ -25,6 +26,17 @@ message ListRacesResponse {
 message ListRacesRequestFilter {
   repeated int64 meeting_ids = 1;
   optional bool visible = 2;
+}
+
+enum SortDirection {
+  ASC = 0;
+  DESC = 1;
+}
+
+// Sort order for listing races.
+message ListRacesRequestSortOrder {
+  string sort_attribute = 1;
+  SortDirection sort_direction = 2;
 }
 
 /* Resources */

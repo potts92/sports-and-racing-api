@@ -18,7 +18,7 @@ type RacesRepo interface {
 	Init() error
 
 	// List will return a list of races.
-	List(filter *racing.ListRacesRequestFilter) ([]*racing.Race, error)
+	List(filter *racing.ListRacesRequestFilter, sort *racing.ListRacesRequestSortOrder) ([]*racing.Race, error)
 }
 
 type racesRepo struct {
@@ -43,7 +43,7 @@ func (r *racesRepo) Init() error {
 	return err
 }
 
-func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race, error) {
+func (r *racesRepo) List(filter *racing.ListRacesRequestFilter, sort *racing.ListRacesRequestSortOrder) ([]*racing.Race, error) {
 	var (
 		err   error
 		query string
@@ -53,6 +53,8 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race,
 	query = getRaceQueries()[racesList]
 
 	query, args = r.applyFilter(query, filter)
+
+	query = r.setSortOrder(query, sort)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -128,4 +130,18 @@ func (r *racesRepo) scanRaces(
 	}
 
 	return races, nil
+}
+
+// Sorts races by the given sort attribute (and sort direction if provided - otherwise defaults to ASC)
+func (r *racesRepo) setSortOrder(query string, sort *racing.ListRacesRequestSortOrder) string {
+	if sort == nil {
+		return query
+	}
+
+	sortAttribute := sort.SortAttribute
+	sortDirection := sort.SortDirection
+
+	query += " ORDER BY " + sortAttribute + " " + sortDirection.String()
+
+	return query
 }
