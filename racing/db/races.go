@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	_ "github.com/mattn/go-sqlite3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
 )
@@ -117,10 +117,7 @@ func (r *racesRepo) scanRaces(
 			return nil, err
 		}
 
-		ts, err := ptypes.TimestampProto(advertisedStart)
-		if err != nil {
-			return nil, err
-		}
+		ts := timestamppb.New(advertisedStart)
 
 		race.AdvertisedStartTime = ts
 
