@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 	"git.neds.sh/matty/entain/racing/proto/racing"
-	"sort"
+	"slices"
 	"testing"
 )
 
@@ -14,107 +14,251 @@ func TestRacesRepo_List(t *testing.T) {
 	racesRepo := NewRacesRepo(racingDB)
 	racesRepo.Init()
 
-	//Test the List method without a filter
-	if allRaces, _ := racesRepo.List(nil, nil); len(allRaces) == 0 {
-		t.Errorf("Expected to get a list of races")
+	visible := true
+	notVisible := false
+
+	testCases := []struct {
+		name      string
+		filter    *racing.ListRacesRequestFilter
+		sortOrder *racing.ListRacesRequestSortOrder
+		validate  func([]*racing.Race) bool
+		error     bool
+	}{
+		{
+			name:      "Unfiltered, unsorted",
+			filter:    nil,
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0
+			},
+		},
+		{
+			name: "Filtered by meeting_id 1 and 5",
+			filter: &racing.ListRacesRequestFilter{
+				MeetingIds: []int64{1, 5},
+			},
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 &&
+					checkCondition(races, func(r *racing.Race) bool {
+						return r.MeetingId == 1 || r.MeetingId == 5
+					})
+			},
+		},
+		{
+			name: "Filtered by visibility",
+			filter: &racing.ListRacesRequestFilter{
+				Visible: &visible,
+			},
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && checkCondition(races, func(r *racing.Race) bool {
+					return r.Visible
+				})
+			},
+		},
+		{
+			name: "Filtered by not visible",
+			filter: &racing.ListRacesRequestFilter{
+				Visible: &notVisible,
+			},
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && checkCondition(races, func(r *racing.Race) bool {
+					return !r.Visible
+				})
+			},
+		},
+		{
+			name: "Filtered by meeting_id 1 and 5 and visibility",
+			filter: &racing.ListRacesRequestFilter{
+				MeetingIds: []int64{1, 5},
+				Visible:    &visible,
+			},
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && checkCondition(races, func(r *racing.Race) bool {
+					return (r.MeetingId == 1 || r.MeetingId == 5) && r.Visible
+				})
+			},
+		},
+		{
+			name: "Filtered by meeting_id 1 and 5 and not visible",
+			filter: &racing.ListRacesRequestFilter{
+				MeetingIds: []int64{1, 5},
+				Visible:    &notVisible,
+			},
+			sortOrder: nil,
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && checkCondition(races, func(r *racing.Race) bool {
+					return (r.MeetingId == 1 || r.MeetingId == 5) && !r.Visible
+				})
+			},
+		},
+		{
+			name:   "Sorted by advertised start time (ascending)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "advertised_start_time",
+				SortDirection: racing.SortDirection_ASC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedByAdvertisedStartTime(races, true)
+			},
+		},
+		{
+			name:   "Sorted by advertised start time (descending)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "advertised_start_time",
+				SortDirection: racing.SortDirection_DESC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedByAdvertisedStartTime(races, false)
+			},
+		},
+		{
+			name:   "Sorted by visibility (ascending not explicitly defined)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "visible",
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedByVisibility(races, true)
+			},
+		},
+		{
+			name:   "Sorted by visibility (descending)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "visible",
+				SortDirection: racing.SortDirection_DESC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedByVisibility(races, false)
+			},
+		},
+		{
+			name:   "Sorted by meeting_id (ascending)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "meeting_id",
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedBbyMeetingId(races, true)
+			},
+		},
+		{
+			name:   "Sorted by meeting_id (descending)",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "meeting_id",
+				SortDirection: racing.SortDirection_DESC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedBbyMeetingId(races, false)
+			},
+		},
+		{
+			name: "Filtered by meeting_id 1 and 5 and sorted by meeting_id (descending)",
+			filter: &racing.ListRacesRequestFilter{
+				MeetingIds: []int64{1, 5},
+			},
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "meeting_id",
+				SortDirection: racing.SortDirection_DESC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) != 0 && isSortedBbyMeetingId(races, false) && checkCondition(races, func(r *racing.Race) bool {
+					return r.MeetingId == 1 || r.MeetingId == 5
+				})
+			},
+		},
+		{
+			name:   "Expect error with invalid sort attribute",
+			filter: nil,
+			sortOrder: &racing.ListRacesRequestSortOrder{
+				SortAttribute: "fake_column",
+				SortDirection: racing.SortDirection_DESC,
+			},
+			validate: func(races []*racing.Race) bool {
+				return len(races) == 0
+			},
+			error: true,
+		},
 	}
 
-	//Test the List method with a meeting_id filter
-	meetingIdFilter := &racing.ListRacesRequestFilter{
-		MeetingIds: []int64{1, 5},
-	}
-	if races, _ := racesRepo.List(meetingIdFilter, nil); len(races) == 0 || !checkCondition(races, func(r *racing.Race) bool {
-		return r.MeetingId == 1 || r.MeetingId == 5
-	}) {
-		t.Errorf("Expected to get a list of races with a meeting id of 1 or 5")
-	}
-
-	//Test the List method with a visibility filter
-	visibility := true
-	visibilityFilter := &racing.ListRacesRequestFilter{
-		Visible: &visibility,
-	}
-	if races, _ := racesRepo.List(visibilityFilter, nil); len(races) == 0 || !checkCondition(races, func(r *racing.Race) bool {
-		return r.Visible
-	}) {
-		t.Errorf("Expected to get a list of visible races")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			races, err := racesRepo.List(tc.filter, tc.sortOrder)
+			if !tc.validate(races) || (err != nil) != tc.error {
+				t.Errorf("Test case failed, expected list of races: %s", tc.name)
+			}
+		})
 	}
 
-	//Test the List method with a visibility filter and a meeting_id filter
-	filter := &racing.ListRacesRequestFilter{
-		MeetingIds: []int64{1, 5},
-		Visible:    &visibility,
-	}
-	if races, _ := racesRepo.List(filter, nil); len(races) == 0 || !checkCondition(races, func(r *racing.Race) bool {
-		return r.MeetingId == 1 || r.MeetingId == 5 && r.Visible
-	}) {
-		t.Errorf("Expected to get a list of races with a meeting id of 1 or 5 and visible")
-	}
-
-	//Test the List method with a time based sort order (ascending)
+	//Test for an invalid sort attribute
 	sortOrder := &racing.ListRacesRequestSortOrder{
-		SortAttribute: "advertised_start_time",
-		SortDirection: racing.SortDirection_ASC,
-	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[i].AdvertisedStartTime.AsTime().After(races[j].AdvertisedStartTime.AsTime())
-	}) {
-		t.Errorf("Expected to get a list of races sorted by advertised start time in ascending order")
-	}
-
-	//Test the List method with a time based sort order (descending)
-	sortOrder = &racing.ListRacesRequestSortOrder{
-		SortAttribute: "advertised_start_time",
+		SortAttribute: "fake_column",
 		SortDirection: racing.SortDirection_DESC,
 	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[i].AdvertisedStartTime.AsTime().Before(races[j].AdvertisedStartTime.AsTime())
-	}) {
-		t.Errorf("Expected to get a list of races sorted by advertised start time in descending order")
+	_, err := racesRepo.List(nil, sortOrder)
+	if err == nil {
+		t.Errorf("Test case failed, expected an error")
 	}
 
-	//Test the List method with a boolean based sort order (ascending)
-	sortOrder = &racing.ListRacesRequestSortOrder{
-		SortAttribute: "visible",
-		SortDirection: racing.SortDirection_ASC,
-	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[i].Visible && !races[j].Visible
-	}) {
-		t.Errorf("Expected to get a list of of races sorted by visibility in ascending order")
-	}
+	//todo: add some tests where we expect errors (e.g. invalid column name, invalid sort direction, etc)
+}
 
-	//Test the List method with a boolean based sort order (descending)
-	sortOrder = &racing.ListRacesRequestSortOrder{
-		SortAttribute: "visible",
-		SortDirection: racing.SortDirection_DESC,
-	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[j].Visible && !races[i].Visible
-	}) {
-		t.Errorf("Expected to get a list of of races sorted by visibility in ascending order")
-	}
+// Checks if a slice of races is sorted by the meeting_id attribute
+func isSortedBbyMeetingId(races []*racing.Race, asc bool) bool {
+	dirMultiplier := getDirMultiplier(asc)
 
-	//Test the List method with an integer based sort order (ascending)
-	sortOrder = &racing.ListRacesRequestSortOrder{
-		SortAttribute: "meeting_id",
-	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[i].MeetingId > races[j].MeetingId
-	}) {
-		t.Errorf("Expected to get a list of races sorted by meeting id in ascending order")
-	}
+	return slices.IsSortedFunc(races, func(i, j *racing.Race) int {
+		if i.MeetingId < j.MeetingId {
+			return -1 * dirMultiplier
+		} else if i.MeetingId == j.MeetingId {
+			return 0
+		} else {
+			return 1 * dirMultiplier
+		}
+	})
+}
 
-	//Test the List method with an integer based sort order (descending)
-	sortOrder = &racing.ListRacesRequestSortOrder{
-		SortAttribute: "meeting_id",
-		SortDirection: racing.SortDirection_DESC,
+// Checks if a slice of races is sorted by the visible attribute
+func isSortedByVisibility(races []*racing.Race, asc bool) bool {
+	dirMultiplier := getDirMultiplier(asc)
+
+	return slices.IsSortedFunc(races, func(i, j *racing.Race) int {
+		if i.Visible && !j.Visible {
+			return 1 * dirMultiplier
+		} else if i.Visible == j.Visible {
+			return 0
+		} else {
+			return -1 * dirMultiplier
+		}
+	})
+}
+
+// Checks if a slice of races is sorted by the advertised start time attribute
+func isSortedByAdvertisedStartTime(races []*racing.Race, asc bool) bool {
+	return slices.IsSortedFunc(races, func(i, j *racing.Race) int {
+		if asc && i.AdvertisedStartTime.AsTime().Before(j.AdvertisedStartTime.AsTime()) || !asc && i.AdvertisedStartTime.AsTime().After(j.AdvertisedStartTime.AsTime()) {
+			return -1
+		} else if i.AdvertisedStartTime.AsTime().Equal(j.AdvertisedStartTime.AsTime()) {
+			return 0
+		} else {
+			return 1
+		}
+	})
+}
+
+// Returns the direction multiplier based on the sort direction (used to reverse sort check functionality)
+func getDirMultiplier(asc bool) int {
+	if asc {
+		return 1
 	}
-	if races, _ := racesRepo.List(nil, sortOrder); len(races) == 0 || sort.SliceIsSorted(races, func(i, j int) bool {
-		return races[i].MeetingId < races[j].MeetingId
-	}) {
-		t.Errorf("Expected to get a list of races sorted by meeting id in descending order")
-	}
+	return -1
 }
 
 // Used to check if all races pass the expected condition
