@@ -206,8 +206,6 @@ func TestRacesRepo_List(t *testing.T) {
 	if err == nil {
 		t.Errorf("Test case failed, expected an error")
 	}
-
-	//todo: add some tests where we expect errors (e.g. invalid column name, invalid sort direction, etc)
 }
 
 // Checks if a slice of races is sorted by the meeting_id attribute
