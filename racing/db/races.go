@@ -123,6 +123,14 @@ func (r *racesRepo) scanRaces(
 
 		race.AdvertisedStartTime = ts
 
+		//faker generates dates in UTC for the database, so we need to compare to UTC time
+		open := ts.AsTime().After(time.Now().UTC())
+		if open {
+			race.Status = racing.Status_OPEN
+		} else {
+			race.Status = racing.Status_CLOSED
+		}
+
 		races = append(races, &race)
 	}
 

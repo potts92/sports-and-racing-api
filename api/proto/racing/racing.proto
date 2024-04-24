@@ -37,6 +37,11 @@ enum SortDirection {
   DESC = 1;
 }
 
+enum Status {
+  OPEN = 0;
+  CLOSED = 1;
+}
+
 // Sort order for listing races.
 message ListRacesRequestSortOrder {
   string sort_attribute = 1;
@@ -59,4 +64,6 @@ message Race {
   bool visible = 5;
   // AdvertisedStartTime is the time the race is advertised to run.
   google.protobuf.Timestamp advertised_start_time = 6;
+  //Status is a derived enum field that represents whether the advertised_start_time has been exceeded.
+  Status status = 7;
 }
