@@ -16,9 +16,10 @@ service Racing {
     // Get maps to HTTP GET. Resource name is mapped to the URL. No body.
     option (google.api.http) = {
       // Note the URL template variable which captures the resource
-      get: "/v1/{id}"
+      get: "/v1/race/{id}"
     };
-  }}
+  }
+}
 
 /* Requests/Responses */
 
