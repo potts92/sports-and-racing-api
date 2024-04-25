@@ -15,6 +15,14 @@ Introduce a new RPC, that allows us to fetch a single race by its ID.
 - `GetRace` RPC calls the `Get` function on the `racesRepo` with the `id` int and returns the result, which uses the above prepared statement to build a query that will retrieve any matching race. We use the same `scanRaces` function the `List` function uses to scan the results and format them into a `Race` message
   - If no results are found, we return a 404 status code with a message indicating no results were found
 
+## Sending a Request
+Make a request for a specific race (ID of 5)...
+
+```bash
+curl -X "POST" "http://localhost:8000/v1/race/5" \
+     -H 'Content-Type: application/json'
+```
+
 ## Testing
 - Tests to check that the new RPC can correctly either return a race when a valid ID is passed, or return no race when an invalid ID is passed has been added to the [races_test.go](racing/db/races_test.go) file. We do so by testing the new `Get` function from the `racesRepo` struct
 - Run all tests from the root of the project with:
