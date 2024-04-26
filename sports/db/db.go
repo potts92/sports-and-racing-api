@@ -259,7 +259,7 @@ func (e *eventsRepo) seedEvents(data MockData) error {
 	var statement *sql.Stmt
 	var err error
 
-	statement, err = e.db.Prepare(`CREATE TABLE IF NOT EXISTS events (id INT PRIMARY KEY, sport_id INT, competition_id INT, home_team INT, away_team INT, home_score INT, away_score INT, advertised_start_time DATETIME , FOREIGN KEY(sport_id) REFERENCES sports(id) FOREIGN KEY(competition_id) REFERENCES competitions(id))`)
+	statement, err = e.db.Prepare(`CREATE TABLE IF NOT EXISTS events (id INT PRIMARY KEY, sport_id INT, competition_id INT, home_team INT, away_team INT, home_score INT, away_score INT, advertised_start_time DATETIME, score_finalised BOOL DEFAULT FALSE, FOREIGN KEY(sport_id) REFERENCES sports(id) FOREIGN KEY(competition_id) REFERENCES competitions(id))`)
 
 	if err != nil {
 		return err

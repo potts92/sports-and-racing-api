@@ -17,6 +17,12 @@ type EventsRepo interface {
 
 	// List will return a list of events.
 	List(filter *sports.ListEventsRequestFilter) ([]*sports.Event, error)
+
+	// Get will return a single event.
+	Get(id int64) (*sports.Event, error)
+
+	// UpdateScore will update a event's score.
+	UpdateScore(id int64, homeScore int32, awayScore int32, finalised bool) (*sports.Event, error)
 }
 
 type eventsRepo struct {
@@ -62,6 +68,58 @@ func (e *eventsRepo) List(filter *sports.ListEventsRequestFilter) ([]*sports.Eve
 	return e.scanEvents(rows)
 }
 
+func (e *eventsRepo) Get(id int64) (*sports.Event, error) {
+	var (
+		err    error
+		query  string
+		rows   *sql.Rows
+		events []*sports.Event
+		args   []interface{}
+	)
+
+	query = getEventQueries()[eventGet]
+
+	args = append(args, id)
+
+	rows, err = e.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err = e.scanEvents(rows)
+
+	if len(events) > 0 {
+		return events[0], nil
+	}
+
+	return nil, nil
+}
+
+func (e *eventsRepo) UpdateScore(id int64, homeScore int32, awayScore int32, finalised bool) (*sports.Event, error) {
+	var (
+		rows sql.Result
+		err  error
+		args []interface{}
+	)
+
+	query := getEventQueries()[eventUpdate]
+
+	args = append(args, homeScore, awayScore, finalised, id)
+	rows, err = e.db.Exec(query, args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	if rowsAffected > 0 {
+		return e.Get(id)
+	}
+
+	return nil, nil
+}
+
 func (e *eventsRepo) scanEvents(rows *sql.Rows) ([]*sports.Event, error) {
 	var events []*sports.Event
 
@@ -78,6 +136,7 @@ func (e *eventsRepo) scanEvents(rows *sql.Rows) ([]*sports.Event, error) {
 			&event.HomeScore,
 			&event.AwayScore,
 			&advertisedStartTime,
+			&event.ScoreFinalised,
 		); err != nil {
 			return nil, err
 		}

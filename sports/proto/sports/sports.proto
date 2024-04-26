@@ -8,11 +8,33 @@ import "google/protobuf/timestamp.proto";
 service Sports {
   // ListEvents will return a collection of all events
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {}
+  // GetEvent returns a single event
+  rpc GetEvent(GetEventRequest) returns (Event) {}
+  // UpdateScore will update the score of an event
+  rpc UpdateScore(UpdateScoreRequest) returns (Event) {}
 }
 
 // ListEventsRequest is the request message for the ListEvents RPC.
 message ListEventsRequest {
   ListEventsRequestFilter filter = 1;
+}
+
+// Request for GetEvent call.
+message GetEventRequest {
+  // ID represents the unique identifier of the event.
+  int64 id = 1;
+}
+
+// Request for UpdateScore call.
+message UpdateScoreRequest {
+  // ID represents the unique identifier of the event.
+  int64 id = 1;
+  // HomeScore represents the home team's score.
+  int32 home_score = 2;
+  // AwayScore represents the away team's score.
+  int32 away_score = 3;
+  // Finalised represents whether the score is to be finalised.
+  bool finalised = 4;
 }
 
 // ListEventsRequestFilter is a filter that can be applied to the ListEvents RPC.
@@ -50,6 +72,8 @@ message Event {
   int32 away_score = 7;
   // AdvertisedStartTime represents the time the event is advertised to start.
   google.protobuf.Timestamp advertised_start_time = 8;
+  // ScoreFinalised represents whether the score has been finalised (i.e. the final score has been input and the event is now over)
+  bool score_finalised = 9;
   // Status is a derived enum field that represents whether the advertised_start_time has been exceeded.
-  Status status = 9;
+  Status status = 10;
 }
