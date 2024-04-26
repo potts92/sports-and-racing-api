@@ -17,10 +17,26 @@ Add another filter to the existing RPC, so we can call `ListRaces` asking for ra
   - This will also allow us to keep the `scanRaces` function clean and simple.
 - Protobuf message field is set to an optional boolean so that the generated Go struct field can differentiate between being unset, and set to `false`
 
+## Sending a Request
+Make a request for races filtered by meeting_id...
+
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-races" \
+     -H 'Content-Type: application/json' \
+     -d $'{
+  "filter": {
+    "meeting_ids": [
+      1,
+      5
+    ]
+  }
+}'
+```
+
 ## Testing
 - A test to ensure that visibility is correctly filtered by has been added to the [races_test.go](racing/db/races_test.go) file.
   - Utilises the in-memory SQL Lite database as this is already using mocked data, so doesn't make sense to add another mocked database (or queries) to memory while also providing valuable test results
-- Run the test using from the root of the project with:
+- Run the tests using from the root of the module with:
 ```bash 
 cd ./racing
 go test ./...
