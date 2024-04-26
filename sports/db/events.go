@@ -3,8 +3,10 @@ package db
 import (
 	"database/sql"
 	"github.com/potts92/sports-and-racing-api/sports/proto/sports"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"os"
 	"sync"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -44,5 +46,55 @@ func (e *eventsRepo) Init() error {
 }
 
 func (e *eventsRepo) List(filter *sports.ListEventsRequestFilter) ([]*sports.Event, error) {
-	return nil, nil
+	var (
+		err   error
+		query string
+		args  []interface{}
+	)
+
+	query = getEventQueries()[eventsList]
+
+	rows, err := e.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.scanEvents(rows)
+}
+
+func (e *eventsRepo) scanEvents(rows *sql.Rows) ([]*sports.Event, error) {
+	var events []*sports.Event
+
+	for rows.Next() {
+		var event sports.Event
+		var advertisedStartTime time.Time
+
+		if err := rows.Scan(
+			&event.Id,
+			&event.Name,
+			&event.Competition,
+			&event.HomeTeam,
+			&event.AwayTeam,
+			&event.HomeScore,
+			&event.AwayScore,
+			&advertisedStartTime,
+		); err != nil {
+			return nil, err
+		}
+
+		ts := timestamppb.New(advertisedStartTime)
+		event.AdvertisedStartTime = ts
+
+		//faker generates dates in UTC for the database, so we need to compare to UTC time
+		open := ts.AsTime().After(time.Now().UTC())
+		if open {
+			event.Status = sports.Status_OPEN
+		} else {
+			event.Status = sports.Status_CLOSED
+		}
+
+		events = append(events, &event)
+	}
+
+	return events, nil
 }
