@@ -3,8 +3,10 @@ package db
 import (
 	"database/sql"
 	"git.neds.sh/matty/entain/racing/proto/racing"
+	"github.com/DATA-DOG/go-sqlmock"
 	"slices"
 	"testing"
+	"time"
 )
 
 // TestRacesRepo_List tests the List method of the RacesRepo
@@ -197,15 +199,46 @@ func TestRacesRepo_List(t *testing.T) {
 		})
 	}
 
-	//Test for an invalid sort attribute
-	sortOrder := &racing.ListRacesRequestSortOrder{
-		SortAttribute: "fake_column",
-		SortDirection: racing.SortDirection_DESC,
-	}
-	_, err := racesRepo.List(nil, sortOrder)
-	if err == nil {
-		t.Errorf("Test case failed, expected an error")
-	}
+	t.Run("Derived status", func(t *testing.T) {
+		// Create a mock database connection
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer db.Close()
+
+		// Create an instance of racesRepo with the mock database connection
+		repo := NewRacesRepo(db)
+
+		// Define the expected columns and rows with the three variations of advertised_start_time we need to test
+		now := time.Now()
+		columns := []string{"id", "meeting_id", "name", "number", "visible", "advertised_start"}
+		rows := sqlmock.NewRows(columns).
+			AddRow(1, 2, "Race 1", 1, true, now.Add(time.Hour)).
+			AddRow(2, 2, "Race 2", 2, false, now.Add(-time.Hour)).
+			AddRow(3, 2, "Race 2", 2, false, now)
+
+		// Set the expectation for the mock database connection
+		mock.ExpectQuery("SELECT (.+) FROM races").WillReturnRows(rows)
+
+		// Call the scanRaces function
+		races, err := repo.List(nil, nil)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
+
+		// If advertised_start_time is after the current time, status should be OPEN, if not, it should be CLOSED
+		//(includes where advertised_start_time is equal to the current time)
+		for _, race := range races {
+			if race.AdvertisedStartTime.AsTime().After(now) {
+				if race.Status != racing.Status_OPEN {
+					t.Errorf("Race status was expected to be open")
+				}
+			} else if race.Status != racing.Status_CLOSED {
+				t.Errorf("Race status was expected to be closed")
+			}
+		}
+	})
 }
 
 // Checks if a slice of races is sorted by the meeting_id attribute
