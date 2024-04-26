@@ -118,7 +118,7 @@ func (e *eventsRepo) buildMockData() (Sports, Teams, Competitions, MockData, err
 		numCompetitions, _ := strconv.Atoi(faker.Number().Between(1, 3))
 		for i := 0; i < numCompetitions; i++ {
 			currCompId++
-			competition := faker.Team().Name()
+			competition := faker.App().Name() + " Cup"
 			competitions[currCompId] = Competition{Name: competition, Sport: id}
 
 			data.Competitions = append(data.Competitions, currCompId)
