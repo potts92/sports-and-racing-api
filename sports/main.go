@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"flag"
 	"github.com/potts92/sports-and-racing-api/sports/db"
+	"github.com/potts92/sports-and-racing-api/sports/proto/sports"
+	"github.com/potts92/sports-and-racing-api/sports/service"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -40,7 +42,14 @@ func run() error {
 
 	grpcServer := grpc.NewServer()
 
-	log.Printf("gRPC server listening on: %s\n", *grpcEndpoint)
+	sports.RegisterSportsServer(
+		grpcServer,
+		service.NewSportsService(
+			eventsRepo,
+		),
+	)
+
+	log.Printf("Sports gRPC server listening on: %s\n", *grpcEndpoint)
 
 	if err := grpcServer.Serve(conn); err != nil {
 		return err

@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"github.com/potts92/sports-and-racing-api/sports/proto/sports"
 	"os"
 	"sync"
 
@@ -11,6 +12,9 @@ import (
 type EventsRepo interface {
 	// Init will initialise our events repository.
 	Init() error
+
+	// List will return a list of events.
+	List(filter *sports.ListEventsRequestFilter) ([]*sports.Event, error)
 }
 
 type eventsRepo struct {
@@ -37,4 +41,8 @@ func (e *eventsRepo) Init() error {
 	}
 
 	return err
+}
+
+func (e *eventsRepo) List(filter *sports.ListEventsRequestFilter) ([]*sports.Event, error) {
+	return nil, nil
 }

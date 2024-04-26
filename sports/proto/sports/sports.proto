@@ -1,0 +1,55 @@
+syntax = "proto3";
+package sports;
+
+option go_package = "/sports";
+
+import "google/protobuf/timestamp.proto";
+
+service Sports {
+  // ListEvents will return a collection of all events
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {}
+}
+
+// ListEventsRequest is the request message for the ListEvents RPC.
+message ListEventsRequest {
+  ListEventsRequestFilter filter = 1;
+}
+
+// ListEventsRequestFilter is a filter that can be applied to the ListEvents RPC.
+message ListEventsRequestFilter {
+}
+
+// ListEventsResponse is the response message for the ListEvents RPC.
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+// Status is an enum that represents the status of an event.
+enum Status {
+  OPEN = 0;
+  CLOSED = 1;
+}
+
+/* Resources */
+
+// An event resource represents a sports event.
+message Event {
+  // ID represents unique identifier for the event.
+  int64 id = 1;
+  // Name represents the name of the sport.
+  string name = 2;
+  // Competition represents the competition name.
+  string competition = 3;
+  // HomeTeam represents the name of the home team.
+  string homeTeam = 4;
+  // Away_team represents the name of the away team.
+  string away_team = 5;
+  // Home Score represents the home team's score.
+  int32 home_score = 6;
+  // Away Score represents the away team's score.
+  int32 away_score = 7;
+  // AdvertisedStartTime represents the time the event is advertised to start.
+  google.protobuf.Timestamp advertised_start_time = 8;
+  // Status is a derived enum field that represents whether the advertised_start_time has been exceeded.
+  Status status = 9;
+}

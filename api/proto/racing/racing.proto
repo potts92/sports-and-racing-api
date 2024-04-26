@@ -21,7 +21,6 @@ service Racing {
   }
 }
 
-/* Requests/Responses */
 
 // Request for ListRaces call.
 message ListRacesRequest {
