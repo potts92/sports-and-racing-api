@@ -18,25 +18,11 @@ We'd like to see the races returned, ordered by their `advertised_start_time`
 - `List` function calls the `setSortOrder` function after the `applyFilters` function
 - `ListRacesRequestSortOrder` message added to the protobuf file is defined as accepting a `sort_attribute` string and `sort_direction` enum (ASC/DESC). With `ASC` being mapped to 0 in the enum, we ensure that this is the default value if no sort direction is passed
 
-## Sending a Request
-Make a request for races sorted by advertised_start_time in ascending order...
-
-```bash
-curl -X "POST" "http://localhost:8000/v1/list-races" \
-     -H 'Content-Type: application/json' \
-     -d $'{
-  "sort": {
-    "sort_direction": "ASC",
-    "sort_attribute": "advertised_start_time"
-  }
-}'
-```
-
 ## Testing
 - Tests have been added to the [races_test.go](racing/db/races_test.go) file to test the correct functionality is applied with different variations of sort inputs
 - A test has also been added to the [races_test.go](racing/db/races_test.go) file to ensure that an error is returned if an invalid sort attribute is passed
 - Tests have also been refactored to follow table driven testing to follow Go best practices
-- - Run the tests using from the root of the module with:
+- - Run the test using from the root of the project with:
 ```bash 
 cd ./racing
 go test ./...
