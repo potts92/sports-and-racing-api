@@ -270,8 +270,37 @@ func (e *eventsRepo) seedEvents(data MockData) error {
 		return err
 	}
 
-	//Add all four indices at once
-	statement, err = e.db.Prepare(`CREATE INDEX IF NOT EXISTS idx_events_sport_id ON events (sport_id);CREATE INDEX IF NOT EXISTS idx_events_competition_id ON events (competition_id);CREATE INDEX IF NOT EXISTS idx_events_home_team ON events (home_team);CREATE INDEX IF NOT EXISTS idx_events_home_team ON events (away_team)`)
+	statement, err = e.db.Prepare(`CREATE INDEX IF NOT EXISTS idx_events_sport_id ON events (sport_id)`)
+
+	if err != nil {
+		return err
+	}
+	_, err = statement.Exec()
+
+	if err != nil {
+		return err
+	}
+	statement, err = e.db.Prepare(`CREATE INDEX IF NOT EXISTS idx_events_competition_id ON events (competition_id)`)
+
+	if err != nil {
+		return err
+	}
+	_, err = statement.Exec()
+
+	if err != nil {
+		return err
+	}
+	statement, err = e.db.Prepare(`CREATE INDEX IF NOT EXISTS idx_events_home_team ON events (home_team)`)
+
+	if err != nil {
+		return err
+	}
+	_, err = statement.Exec()
+
+	if err != nil {
+		return err
+	}
+	statement, err = e.db.Prepare(`CREATE INDEX IF NOT EXISTS idx_events_home_team ON events (away_team)`)
 
 	if err != nil {
 		return err
