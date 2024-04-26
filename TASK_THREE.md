@@ -66,9 +66,19 @@ Our races require a new `status` field that is derived based on their `advertise
 - We will also add a `status` enum field to the `Race` struct to enforce the status field to be either `OPEN` or `CLOSED`.
 - If in future we need to filter by status, we can consider the combined approach mentioned above or the SQL approach filtering by a current date time.
 
+## Sending a Request
+Make a request for races (derived `status` will be returned in races)...
+> If all races in your database are in the past and therefore not `OPEN`, you can remove the [racing.db](racing/db/racing.db) file and run the `racing` service again to generate new races (which will be in the past and future) to test the `OPEN` status.
+
+```bash
+curl -X "POST" "http://localhost:8000/v1/list-races" \
+     -H 'Content-Type: application/json' \
+     -d $'{}'
+```
+
 ## Testing
 - A test to ensure that the status is correctly derived based on the `advertised_start_time` field has been added to the [races_test.go](racing/db/races_test.go) file. We are unable to test the `scanRaces` function directly as it is a private function, so we test the `List` function which calls the `scanRaces` function. This time we do mock the database connection by providing expected rows to be returned when queries structured in a particular way are processed. This ensures we know **_exactly_** what to test for in terms of whether to expect an `OPEN` or `CLOSED` `status`.
-- Run the test using from the root of the project with:
+- Run the tests using from the root of the module with:
 ```bash 
 cd ./racing
 go test ./...
