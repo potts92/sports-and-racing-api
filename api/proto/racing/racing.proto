@@ -11,6 +11,14 @@ service Racing {
   rpc ListRaces(ListRacesRequest) returns (ListRacesResponse) {
     option (google.api.http) = { post: "/v1/list-races", body: "*" };
   }
+  // GetRace returns a single race.
+  rpc GetRace(GetRaceRequest) returns (Race) {
+    // Get maps to HTTP GET. Resource name is mapped to the URL. No body.
+    option (google.api.http) = {
+      // Note the URL template variable which captures the resource
+      get: "/v1/race/{id}"
+    };
+  }
 }
 
 /* Requests/Responses */
@@ -19,6 +27,11 @@ service Racing {
 message ListRacesRequest {
   ListRacesRequestFilter filter = 1;
   ListRacesRequestSortOrder sort = 2;
+}
+
+message GetRaceRequest {
+  // The field will contain the ID of the race requested
+  int64 id = 1;
 }
 
 // Response to ListRaces call.

@@ -9,12 +9,11 @@ import (
 	"time"
 )
 
+var racesRepoInstance RacesRepo
+
 // TestRacesRepo_List tests the List method of the RacesRepo
 func TestRacesRepo_List(t *testing.T) {
-	//No need to mock the database as we are using an in-memory "mocked" (faker) database
-	racingDB, _ := sql.Open("sqlite3", "./racing.db")
-	racesRepo := NewRacesRepo(racingDB)
-	racesRepo.Init()
+	racesRepoInstance = initRacesRepo()
 
 	visible := true
 	notVisible := false
@@ -192,7 +191,7 @@ func TestRacesRepo_List(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			races, err := racesRepo.List(tc.filter, tc.sortOrder)
+			races, err := racesRepoInstance.List(tc.filter, tc.sortOrder)
 			if !tc.validate(races) || (err != nil) != tc.error {
 				t.Errorf("Test case failed, expected list of races: %s", tc.name)
 			}
@@ -239,6 +238,52 @@ func TestRacesRepo_List(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestRacesRepo_Get(t *testing.T) {
+	racesRepoInstance = initRacesRepo()
+
+	testCases := []struct {
+		name     string
+		id       int64
+		validate func(race *racing.Race) bool
+	}{
+		{
+			name: "Successfully return a race by ID",
+			id:   1,
+			validate: func(race *racing.Race) bool {
+				return race.Id == 1
+			},
+		},
+		{
+			name: "Receive no race when a race is not found",
+			id:   100000000,
+			validate: func(race *racing.Race) bool {
+				return race == nil
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			race, _ := racesRepoInstance.Get(tc.id)
+			if !tc.validate(race) {
+				t.Errorf("Test case failed, expected race: %s", tc.name)
+			}
+		})
+	}
+}
+
+// Returns or creates an instance of the RacesRepo
+func initRacesRepo() RacesRepo {
+	if racesRepoInstance == nil {
+		//No need to mock the database as we are using an in-memory "mocked" (faker) database
+		racingDB, _ := sql.Open("sqlite3", "./racing.db")
+		racesRepoInstance = NewRacesRepo(racingDB)
+		racesRepoInstance.Init()
+	}
+
+	return racesRepoInstance
 }
 
 // Checks if a slice of races is sorted by the meeting_id attribute
