@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
+	"github.com/potts92/sports-and-racing-api/sports/db"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -23,6 +25,16 @@ func main() {
 func run() error {
 	conn, err := net.Listen("tcp", port)
 	if err != nil {
+		return err
+	}
+
+	sportsDB, err := sql.Open("sqlite3", "./db/sports.db")
+	if err != nil {
+		return err
+	}
+
+	eventsRepo := db.NewEventsRepo(sportsDB)
+	if err := eventsRepo.Init(); err != nil {
 		return err
 	}
 

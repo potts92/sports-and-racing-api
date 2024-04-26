@@ -2,7 +2,11 @@ module github.com/potts92/sports-and-racing-api/sports
 
 go 1.22.2
 
-require google.golang.org/grpc v1.63.2
+require (
+	github.com/mattn/go-sqlite3 v1.14.22
+	google.golang.org/grpc v1.63.2
+	syreclabs.com/go/faker v1.2.3
+)
 
 require (
 	golang.org/x/net v0.21.0 // indirect
