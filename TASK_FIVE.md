@@ -28,10 +28,27 @@ Create a `sports` service that for sake of simplicity, implements a similar API 
 
 ## Future Considerations
 - If performance deteriorates as the number of `event`s increases, we can consider:
+  - Foreign keys on `sport`, `competition` and `team` names rather than IDs so we don't need to `JOIN` on the `sport`, `competition` and `team` tables to get the names
+    - Drawback would be having to update the `sport`, `competition` and `team` names in multiple places if they change
   - Setting up material views to store commonly run complex query (like our multi-`JOIN` query) results in materialised views to allow the database to retrieve the data without having to recompute the entire query
   - Using a caching layer to store the results of the query to avoid having to run the query every time (this is more useful if the data is read more often than it is written which may not be the case for live sports) 
   - Using a NoSQL database like MongoDB to store the data as it is more scalable than a relational database like MySQL -> given that we control the access patterns for this data, this would be a good fit
   - Partitioning the `event` data across multiple tables to improve performance (potentially by `sport`, `competition` or even on the derived `status` field if we move this into the database)
+- Return different errors for `UpdateScores` RPC if the `event` is not found or if the `score_finalised` flag is set to `true`
+
+## Final Solution
+- Track `competition`s, `team`s and `sport`s in separate tables, joined to the `event`s table with indices added to the foreign keys to sure performance is optimised
+- `faker` module used to generate all of these fields except for the `sport_name` - which we get around by defining a hardcoded map of sports
+- Given that we are randomising the amount of data in the database for this service (as opposed to the racing service which only ever attempts to `INSERT IGNORE INTO` 100 rows in one table), we first check if the `sports.db` SQLite database exists and if it does, we do not run the `seed` function to repopulate it
+- Rather than scanning returned rows to map teams/ sport/ competition IDs to their relevant names, we handle this with a `JOIN` in the SQL query
+- A `Get` RPC on the `sports` service allows for fetching a single `event` by its `id`
+- The `ListEvents` RPC on the `sports` service allows for fetching all `event`s
+>I've not added filtering and sorting to this RPC as we've shown how we can do it previously, but in the future we could:
+>    - Allow filtering by `sport` and `competition` with simple `WHERE` clauses in the SQL query (utilising relevant `JOIN`s)
+>    - Allow filtering by team (regardless of home/ away) by adding an `OR` clause to the SQL query's `WHERE` clause (utilising relevant `JOIN`s) e.g. `WHERE home_team = 'Wildcats' OR away_team = 'Wildcats'`
+- The `UpdateScore` RPC on the `sports` service allows for updating the score of an `event`, and setting the `score_finalised` flag to lock further updates to the score
+  - We sequentially run the `UPDATE` and `SELECT` (if the `UPDATE` is successful) queries if the `score_finalised` flag is set to `false`
+  - We return the updated `event` after the score is updated
 
 ## Sending a Request
 Make a request for all events...
@@ -58,16 +75,11 @@ curl -X "PATCH" "http://localhost:8000/v1/event/11/update-score" \
 }'
 ```
 
-## Final Solution
-- Track `competition`s, `team`s and `sport`s in separate tables, joined to the `event`s table with indices added to the foreign keys to sure performance is optimised
-- `faker` module used to generate all of these fields except for the `sport_name` - which we get around by defining a hardcoded map of sports
-- Given that we are randomising the amount of data in the database for this service (as opposed to the racing service which only ever attempts to `INSERT IGNORE INTO` 100 rows in one table), we first check if the `sports.db` SQLite database exists and if it does, we do not run the `seed` function to repopulate it
-- Rather than scanning returned rows to map teams/ sport/ competition IDs to their relevant names, we handle this with a `JOIN` in the SQL query
-- A `Get` RPC on the `sports` service allows for fetching a single `event` by its `id`
-- The `ListEvents` RPC on the `sports` service allows for fetching all `event`s
->I've not added filtering and sorting to this RPC as we've shown how we can do it previously, but in the future we could:
->    - Allow filtering by `sport` and `competition` with simple `WHERE` clauses in the SQL query (utilising relevant `JOIN`s)
->    - Allow filtering by team (regardless of home/ away) by adding an `OR` clause to the SQL query's `WHERE` clause (utilising relevant `JOIN`s) e.g. `WHERE home_team = 'Wildcats' OR away_team = 'Wildcats'`
-- The `UpdateScore` RPC on the `sports` service allows for updating the score of an `event`, and setting the `score_finalised` flag to lock further updates to the score
-  - We sequentially run the `UPDATE` and `SELECT` (if the `UPDATE` is successful) queries if the `score_finalised` flag is set to `false`
-  - We return the updated `event` after the score is updated
+## Testing
+- Tests to check that the new sports service's `List` and `UpdateScore` RPCs work as expected have been added to the [races_test.go](racing/db/races_test.go) file. We do so by testing that the new `List` function from the `eventsRepo` can filter by `score_finalised` (`true` and `false`) and that the `UpdateScore` function from the `eventsRepo` can correctly update the score of an `event` and set the `score_finalised` flag if it was not already finalised.
+- `UpdateScore` test uses rows returned from the `List` function to ensure that we can test with finalised and non-finalised scores
+- Run all tests from the root of the project with:
+```bash 
+cd ./sports
+go test ./...
+```

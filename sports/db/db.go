@@ -314,7 +314,7 @@ func (e *eventsRepo) seedEvents(data MockData) error {
 	//Add 100 events to the events table using randomised data from the mockData map
 	log.Print("Adding 100 events to the events table...")
 	for i := 1; i <= 100; i++ {
-		statement, err = e.db.Prepare(`INSERT OR IGNORE INTO events(id, sport_id, competition_id, home_team, away_team, home_score, away_score, advertised_start_time) VALUES (?,?,?,?,?,?,?,?)`)
+		statement, err = e.db.Prepare(`INSERT OR IGNORE INTO events(id, sport_id, competition_id, home_team, away_team, home_score, away_score, advertised_start_time, score_finalised) VALUES (?,?,?,?,?,?,?,?,?)`)
 
 		if err != nil {
 			return err
@@ -342,6 +342,7 @@ func (e *eventsRepo) seedEvents(data MockData) error {
 			0,
 			0,
 			faker.Time().Between(time.Now().AddDate(0, 0, -1), time.Now().AddDate(0, 0, 2)).Format(time.RFC3339),
+			faker.Number().Between(0, 1),
 		)
 
 		if err != nil {

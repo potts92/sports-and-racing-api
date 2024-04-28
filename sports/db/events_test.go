@@ -8,7 +8,11 @@ import (
 
 var eventsRepoInstance EventsRepo
 
-// TestEventsRepo_List tests the List method of the EventsRepo with the score_finalised filter
+var finalisedEvent *sports.Event
+var notFinalisedEvent *sports.Event
+
+// TestEventsRepo_List tests the List method of the EventsRepo and saves the finalised and not finalised events for use in the UpdateScore test
+// If this test fails (and these events are unable to be found and stored), the UpdateScore test will not run anyway
 func TestEventsRepo_List(t *testing.T) {
 	eventsRepoInstance = initEventsRepo()
 
@@ -26,6 +30,10 @@ func TestEventsRepo_List(t *testing.T) {
 				ScoreFinalised: &scoreFinalised,
 			},
 			validate: func(events []*sports.Event) bool {
+				if len(events) != 0 {
+					// Saved for use by the UpdateScore test
+					finalisedEvent = events[0]
+				}
 				return len(events) != 0 && checkCondition(events, func(event *sports.Event) bool {
 					return event.ScoreFinalised
 				})
@@ -37,6 +45,10 @@ func TestEventsRepo_List(t *testing.T) {
 				ScoreFinalised: &scoreNotFinalised,
 			},
 			validate: func(events []*sports.Event) bool {
+				if len(events) != 0 {
+					// Saved for use by the UpdateScore test
+					notFinalisedEvent = events[0]
+				}
 				return len(events) != 0 && checkCondition(events, func(event *sports.Event) bool {
 					return !event.ScoreFinalised
 				})
@@ -59,10 +71,56 @@ func TestEventsRepo_List(t *testing.T) {
 	}
 }
 
+// todo: test update score - valid and invalid updates
+func TestEventsRepo_UpdateScore(t *testing.T) {
+	// Use real database connection to test that scores are actually updated
+	eventsRepoInstance = initEventsRepo()
+
+	testCases := []struct {
+		name      string
+		id        int64
+		homeScore int32
+		awayScore int32
+		finalised bool
+		validate  func(*sports.Event) bool
+	}{
+		{
+			name:      "Update finalised event",
+			id:        finalisedEvent.Id,
+			homeScore: finalisedEvent.HomeScore + 1,
+			awayScore: finalisedEvent.AwayScore + 1,
+			finalised: true,
+			validate: func(event *sports.Event) bool {
+				return event == nil
+			},
+		},
+		{
+			name:      "Update not finalised event",
+			id:        notFinalisedEvent.Id,
+			homeScore: notFinalisedEvent.HomeScore + 1,
+			awayScore: notFinalisedEvent.AwayScore + 1,
+			finalised: true,
+			validate: func(event *sports.Event) bool {
+				return event.ScoreFinalised && event.HomeScore == notFinalisedEvent.HomeScore+1 && event.AwayScore == notFinalisedEvent.AwayScore+1
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			event, _ := eventsRepoInstance.UpdateScore(tc.id, tc.homeScore, tc.awayScore, tc.finalised)
+			if !tc.validate(event) {
+				t.Errorf("Test case failed, expected event to be updated: %s", tc.name)
+			}
+		})
+
+	}
+}
+
 func initEventsRepo() EventsRepo {
 	if eventsRepoInstance == nil {
-		sportsDB, _ := sql.Open("sqlite", "./sports.db")
-		eventsRepoInstance := NewEventsRepo(sportsDB)
+		sportsDB, _ := sql.Open("sqlite3", "./sports.db")
+		eventsRepoInstance = NewEventsRepo(sportsDB)
 		eventsRepoInstance.Init()
 	}
 
