@@ -54,6 +54,7 @@ message ListEventsResponse {
 
 // Filter for listing events.
 message ListEventsRequestFilter {
+  optional bool score_finalised = 1;
 }
 
 // Status of an event.

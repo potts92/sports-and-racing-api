@@ -5,6 +5,7 @@ import (
 	"github.com/potts92/sports-and-racing-api/sports/proto/sports"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,11 +57,15 @@ func (e *eventsRepo) List(filter *sports.ListEventsRequestFilter) ([]*sports.Eve
 		err   error
 		query string
 		args  []interface{}
+		rows  *sql.Rows
 	)
 
 	query = getEventQueries()[eventsList]
 
-	rows, err := e.db.Query(query, args...)
+	query = e.applyFilter(query, filter)
+
+	rows, err = e.db.Query(query, args...)
+
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +123,32 @@ func (e *eventsRepo) UpdateScore(id int64, homeScore int32, awayScore int32, fin
 	}
 
 	return nil, nil
+}
+
+func (e *eventsRepo) applyFilter(query string, filter *sports.ListEventsRequestFilter) string {
+	var (
+		clauses []string
+	)
+
+	if filter == nil {
+		return query
+	}
+
+	if filter.ScoreFinalised != nil {
+		var visibility string
+		if *filter.ScoreFinalised {
+			visibility = "1"
+		} else {
+			visibility = "0"
+		}
+		clauses = append(clauses, "score_finalised = "+visibility)
+	}
+
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+
+	return query
 }
 
 func (e *eventsRepo) scanEvents(rows *sql.Rows) ([]*sports.Event, error) {

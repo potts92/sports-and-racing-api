@@ -39,6 +39,7 @@ message UpdateScoreRequest {
 
 // ListEventsRequestFilter is a filter that can be applied to the ListEvents RPC.
 message ListEventsRequestFilter {
+  optional bool score_finalised = 1;
 }
 
 // ListEventsResponse is the response message for the ListEvents RPC.

@@ -29,12 +29,12 @@ const (
 
 func getEventQueries() map[string]string {
 	return map[string]string{
-		eventsList: defaultGet + ";",
+		eventsList: defaultGet,
 		eventUpdate: `
 			UPDATE events
 			SET home_score = ?, away_score = ?, score_finalised = ?
-			WHERE id = ? AND score_finalised = FALSE;
+			WHERE id = ? AND score_finalised = FALSE
 		`,
-		eventGet: defaultGet + "WHERE e.id = ?;",
+		eventGet: defaultGet + "WHERE e.id = ?",
 	}
 }
