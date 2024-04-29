@@ -1,9 +1,8 @@
 package db
 
 import (
-	"time"
-
 	"syreclabs.com/go/faker"
+	"time"
 )
 
 func (r *racesRepo) seed() error {
