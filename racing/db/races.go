@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	_ "github.com/mattn/go-sqlite3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
 )
@@ -80,6 +80,19 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 		}
 	}
 
+	// Need to check if visible is in filter so that it won't default to false
+	// If not set, visibility won't be set and SQL won't be affected
+	// Go struct field is a pointer to a boolean (set as optional in protobuf) to differentiate between unset and false
+	if filter.Visible != nil {
+		var visibility string
+		if *filter.Visible == true {
+			visibility = "true"
+		} else {
+			visibility = "false"
+		}
+		clauses = append(clauses, "visible = "+visibility)
+	}
+
 	if len(clauses) != 0 {
 		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
@@ -87,7 +100,7 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 	return query, args
 }
 
-func (m *racesRepo) scanRaces(
+func (r *racesRepo) scanRaces(
 	rows *sql.Rows,
 ) ([]*racing.Race, error) {
 	var races []*racing.Race
@@ -104,10 +117,7 @@ func (m *racesRepo) scanRaces(
 			return nil, err
 		}
 
-		ts, err := ptypes.TimestampProto(advertisedStart)
-		if err != nil {
-			return nil, err
-		}
+		ts := timestamppb.New(advertisedStart)
 
 		race.AdvertisedStartTime = ts
 
