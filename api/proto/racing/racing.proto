@@ -11,13 +11,26 @@ service Racing {
   rpc ListRaces(ListRacesRequest) returns (ListRacesResponse) {
     option (google.api.http) = { post: "/v1/list-races", body: "*" };
   }
+  // GetRace returns a single race.
+  rpc GetRace(GetRaceRequest) returns (Race) {
+    // Get maps to HTTP GET. Resource name is mapped to the URL. No body.
+    option (google.api.http) = {
+      // Note the URL template variable which captures the resource
+      get: "/v1/race/{id}"
+    };
+  }
 }
 
-/* Requests/Responses */
 
 // Request for ListRaces call.
 message ListRacesRequest {
   ListRacesRequestFilter filter = 1;
+  ListRacesRequestSortOrder sort = 2;
+}
+
+message GetRaceRequest {
+  // The field will contain the ID of the race requested
+  int64 id = 1;
 }
 
 // Response to ListRaces call.
@@ -28,6 +41,23 @@ message ListRacesResponse {
 // Filter for listing races.
 message ListRacesRequestFilter {
   repeated int64 meeting_ids = 1;
+  optional bool visible = 2;
+}
+
+enum SortDirection {
+  ASC = 0;
+  DESC = 1;
+}
+
+enum Status {
+  OPEN = 0;
+  CLOSED = 1;
+}
+
+// Sort order for listing races.
+message ListRacesRequestSortOrder {
+  string sort_attribute = 1;
+  SortDirection sort_direction = 2;
 }
 
 /* Resources */
@@ -46,4 +76,6 @@ message Race {
   bool visible = 5;
   // AdvertisedStartTime is the time the race is advertised to run.
   google.protobuf.Timestamp advertised_start_time = 6;
+  //Status is a derived enum field that represents whether the advertised_start_time has been exceeded.
+  Status status = 7;
 }
